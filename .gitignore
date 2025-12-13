@@ -1,0 +1,40 @@
+# Sensitive files - DO NOT COMMIT
+*.env
+config.env
+.env.local
+.env.production
+
+# Terraform sensitive files
+terraform/terraform.tfvars
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/.terraform.lock.hcl
+
+# Backup files
+*.backup
+*.bak
+*-backup.tar.gz
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# Docker volumes (local development)
+volumes/
+
+# Temporary files
+tmp/
+temp/
+*.tmp

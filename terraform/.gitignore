@@ -1,0 +1,13 @@
+# Terraform files
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraform/
+.terraform.lock.hcl
+
+# Sensitive files - DO NOT COMMIT
+terraform.tfvars
+
+# OS files
+.DS_Store
+Thumbs.db

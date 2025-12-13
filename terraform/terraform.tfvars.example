@@ -1,0 +1,23 @@
+# Copy this file to terraform.tfvars and fill in your values
+
+# Your GCP billing account ID
+billing_account_id = "YOUR-BILLING-ACCOUNT-ID"
+
+# Your Cloudflare Tunnel token
+tunnel_token = "YOUR-CLOUDFLARE-TUNNEL-TOKEN"
+
+# Project name (will have random suffix added)
+project_name = "n8n-automation"
+
+# Your domain name for n8n
+domain = "n8n.example.com"
+
+# Timezone for n8n
+timezone = "UTC"
+
+# PostgreSQL password (change this!)
+postgres_password = "change-this-secure-password"
+
+# Optional: Change GCP region/zone
+# region = "us-central1"
+# zone = "us-central1-a"
