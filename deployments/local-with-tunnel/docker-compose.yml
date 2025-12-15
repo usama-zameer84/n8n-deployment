@@ -62,7 +62,9 @@ services:
     image: cloudflare/cloudflared:latest
     container_name: cloudflare-tunnel
     restart: unless-stopped
-    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN}
+    command: tunnel --config /etc/cloudflared/config.yml run --token ${TUNNEL_TOKEN}
+    volumes:
+      - ./config.yml:/etc/cloudflared/config.yml
     environment:
       - TUNNEL_TOKEN=${TUNNEL_TOKEN}
     networks:

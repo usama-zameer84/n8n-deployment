@@ -38,3 +38,6 @@ volumes/
 tmp/
 temp/
 *.tmp
+
+# Workflows
+workflows/

@@ -105,7 +105,8 @@ if [ -n "$EXISTING_TUNNEL" ]; then
     read -p "Do you want to recreate this tunnel? (y/N): " RECREATE
     if [[ $RECREATE =~ ^[Yy]$ ]]; then
         echo "Deleting existing tunnel..."
-        cloudflared tunnel delete "$TUNNEL_NAME" -f || true
+        cloudflared tunnel delete -f "$TUNNEL_NAME" || true
+        sleep 2
         echo "Creating new tunnel..."
         cloudflared tunnel create "$TUNNEL_NAME"
         TUNNEL_ID=$(cloudflared tunnel list | grep "$TUNNEL_NAME" | awk '{print $1}')
@@ -144,21 +145,35 @@ EXISTING_ROUTE=$(cloudflared tunnel route dns list 2>/dev/null | grep "$DOMAIN" 
 
 if [ -n "$EXISTING_ROUTE" ]; then
     echo -e "${CYAN}DNS route already exists for $DOMAIN${NC}"
-    echo -e "${GREEN}✓ DNS route verified${NC}"
-else
-    cloudflared tunnel route dns "$TUNNEL_ID" "$DOMAIN"
     
-    if [ $? -ne 0 ]; then
-        echo -e "${YELLOW}Warning: Failed to configure DNS automatically${NC}"
-        echo -e "${YELLOW}You may need to add the DNS record manually in Cloudflare Zero Trust dashboard${NC}"
-        echo ""
-        echo "Manual steps:"
-        echo "  1. Go to https://one.dash.cloudflare.com/"
-        echo "  2. Navigate to Networks > Tunnels"
-        echo "  3. Click on your tunnel: $TUNNEL_NAME"
-        echo "  4. Go to Public Hostname tab"
-        echo "  5. Add hostname: $DOMAIN -> http://n8n:5678"
-        echo ""
+    if [[ $RECREATE =~ ^[Yy]$ ]]; then
+        echo -e "${YELLOW}Updating DNS route for recreated tunnel...${NC}"
+        if ! cloudflared tunnel route dns -f "$TUNNEL_ID" "$DOMAIN"; then
+            echo -e "${YELLOW}Warning: Failed to update DNS route${NC}"
+        else
+            echo -e "${GREEN}✓ DNS route updated${NC}"
+        fi
+    else
+        echo -e "${GREEN}✓ DNS route verified${NC}"
+    fi
+else
+    # Try to create route, handle failure by attempting overwrite
+    if ! cloudflared tunnel route dns "$TUNNEL_ID" "$DOMAIN"; then
+        echo -e "${YELLOW}Standard route creation failed. Attempting to overwrite...${NC}"
+        if ! cloudflared tunnel route dns -f "$TUNNEL_ID" "$DOMAIN"; then
+            echo -e "${YELLOW}Warning: Failed to configure DNS automatically${NC}"
+            echo -e "${YELLOW}You may need to add the DNS record manually in Cloudflare Zero Trust dashboard${NC}"
+            echo ""
+            echo "Manual steps:"
+            echo "  1. Go to https://one.dash.cloudflare.com/"
+            echo "  2. Navigate to Networks > Tunnels"
+            echo "  3. Click on your tunnel: $TUNNEL_NAME"
+            echo "  4. Go to Public Hostname tab"
+            echo "  5. Add hostname: $DOMAIN -> http://n8n:5678"
+            echo ""
+        else
+            echo -e "${GREEN}✓ DNS configured successfully${NC}"
+        fi
     else
         echo -e "${GREEN}✓ DNS configured successfully${NC}"
     fi
@@ -191,6 +206,26 @@ ingress:
 EOF
 
 echo -e "${GREEN}✓ Configuration file created at $CONFIG_FILE${NC}"
+
+# Create config.yml for Docker
+echo "Creating Docker configuration file..."
+DOCKER_CONFIG_DIR="deployments/local-with-tunnel"
+if [ ! -d "$DOCKER_CONFIG_DIR" ]; then
+     if [ -d "../deployments/local-with-tunnel" ]; then
+        DOCKER_CONFIG_DIR="../deployments/local-with-tunnel"
+     fi
+fi
+
+DOCKER_CONFIG_FILE="$DOCKER_CONFIG_DIR/config.yml"
+cat > "$DOCKER_CONFIG_FILE" <<EOF
+tunnel: $TUNNEL_ID
+ingress:
+  - hostname: $DOMAIN
+    service: http://n8n:5678
+  - service: http_status:404
+EOF
+
+echo -e "${GREEN}✓ Docker configuration file created at $DOCKER_CONFIG_FILE${NC}"
 echo ""
 
 # Generate tunnel token
@@ -210,44 +245,92 @@ echo ""
 
 # Update terraform.tfvars
 echo -e "${YELLOW}Step 8: Updating terraform.tfvars${NC}"
-TFVARS_FILE="terraform.tfvars"
 
-if [ -f "$TFVARS_FILE" ]; then
-    # Check if tunnel_token already exists
-    if grep -q "^tunnel_token" "$TFVARS_FILE"; then
-        # Update existing token
-        sed -i.bak "s|^tunnel_token.*|tunnel_token       = \"$TUNNEL_TOKEN\"|" "$TFVARS_FILE"
-        echo -e "${GREEN}✓ Updated tunnel_token in $TFVARS_FILE${NC}"
+read -p "Do you want to update the Terraform configuration (for VM deployment) with this tunnel? (y/N): " UPDATE_TF
+
+if [[ $UPDATE_TF =~ ^[Yy]$ ]]; then
+    # Locate terraform directory
+    if [ -d "terraform" ]; then
+        TF_DIR="terraform"
+    elif [ -d "../terraform" ]; then
+        TF_DIR="../terraform"
     else
-        # Append token
-        echo "tunnel_token       = \"$TUNNEL_TOKEN\"" >> "$TFVARS_FILE"
-        echo -e "${GREEN}✓ Added tunnel_token to $TFVARS_FILE${NC}"
+        TF_DIR="terraform"
     fi
-    
-    # Check if domain already exists
-    if grep -q "^domain" "$TFVARS_FILE"; then
-        # Update existing domain
-        sed -i.bak "s|^domain.*|domain             = \"$DOMAIN\"|" "$TFVARS_FILE"
-        echo -e "${GREEN}✓ Updated domain in $TFVARS_FILE${NC}"
-    else
-        # Append domain
-        echo "domain             = \"$DOMAIN\"" >> "$TFVARS_FILE"
-        echo -e "${GREEN}✓ Added domain to $TFVARS_FILE${NC}"
-    fi
-    
-    rm -f "${TFVARS_FILE}.bak"
-else
-    echo -e "${YELLOW}Warning: $TFVARS_FILE not found. Creating from example...${NC}"
-    if [ -f "terraform.tfvars.example" ]; then
-        cp terraform.tfvars.example "$TFVARS_FILE"
-        sed -i.bak "s|YOUR-CLOUDFLARE-TUNNEL-TOKEN|$TUNNEL_TOKEN|" "$TFVARS_FILE"
-        sed -i.bak "s|n8n.example.com|$DOMAIN|" "$TFVARS_FILE"
+
+    TFVARS_FILE="$TF_DIR/terraform.tfvars"
+    TFVARS_EXAMPLE="$TF_DIR/terraform.tfvars.example"
+
+    if [ -f "$TFVARS_FILE" ]; then
+        # Check if tunnel_token already exists
+        if grep -q "^tunnel_token" "$TFVARS_FILE"; then
+            # Update existing token
+            sed -i.bak "s|^tunnel_token.*|tunnel_token       = \"$TUNNEL_TOKEN\"|" "$TFVARS_FILE"
+            echo -e "${GREEN}✓ Updated tunnel_token in $TFVARS_FILE${NC}"
+        else
+            # Append token
+            echo "tunnel_token       = \"$TUNNEL_TOKEN\"" >> "$TFVARS_FILE"
+            echo -e "${GREEN}✓ Added tunnel_token to $TFVARS_FILE${NC}"
+        fi
+        
+        # Check if domain already exists
+        if grep -q "^domain" "$TFVARS_FILE"; then
+            # Update existing domain
+            sed -i.bak "s|^domain.*|domain             = \"$DOMAIN\"|" "$TFVARS_FILE"
+            echo -e "${GREEN}✓ Updated domain in $TFVARS_FILE${NC}"
+        else
+            # Append domain
+            echo "domain             = \"$DOMAIN\"" >> "$TFVARS_FILE"
+            echo -e "${GREEN}✓ Added domain to $TFVARS_FILE${NC}"
+        fi
+        
         rm -f "${TFVARS_FILE}.bak"
-        echo -e "${GREEN}✓ Created $TFVARS_FILE from example${NC}"
-        echo -e "${YELLOW}Please edit $TFVARS_FILE and fill in remaining values${NC}"
     else
-        echo -e "${RED}Error: terraform.tfvars.example not found${NC}"
+        echo -e "${YELLOW}Warning: $TFVARS_FILE not found. Creating from example...${NC}"
+        if [ -f "$TFVARS_EXAMPLE" ]; then
+            cp "$TFVARS_EXAMPLE" "$TFVARS_FILE"
+            sed -i.bak "s|YOUR-CLOUDFLARE-TUNNEL-TOKEN|$TUNNEL_TOKEN|" "$TFVARS_FILE"
+            sed -i.bak "s|n8n.example.com|$DOMAIN|" "$TFVARS_FILE"
+            rm -f "${TFVARS_FILE}.bak"
+            echo -e "${GREEN}✓ Created $TFVARS_FILE from example${NC}"
+            echo -e "${YELLOW}Please edit $TFVARS_FILE and fill in remaining values${NC}"
+        else
+            echo -e "${RED}Error: $TFVARS_EXAMPLE not found${NC}"
+        fi
     fi
+else
+    echo -e "${YELLOW}Skipping Terraform configuration update.${NC}"
+fi
+echo ""
+
+# Update local deployment config
+echo -e "${YELLOW}Step 9: Updating local deployment config${NC}"
+LOCAL_CONFIG_DIR="deployments/local-with-tunnel"
+
+if [ ! -d "$LOCAL_CONFIG_DIR" ]; then
+     if [ -d "../deployments/local-with-tunnel" ]; then
+        LOCAL_CONFIG_DIR="../deployments/local-with-tunnel"
+     fi
+fi
+
+LOCAL_CONFIG_FILE="$LOCAL_CONFIG_DIR/config.env"
+LOCAL_EXAMPLE="$LOCAL_CONFIG_DIR/config.env.example"
+
+if [ -f "$LOCAL_CONFIG_FILE" ]; then
+    # Update existing file
+    sed -i.bak "s|^TUNNEL_TOKEN=.*|TUNNEL_TOKEN=$TUNNEL_TOKEN|" "$LOCAL_CONFIG_FILE"
+    sed -i.bak "s|^N8N_DOMAIN=.*|N8N_DOMAIN=$DOMAIN|" "$LOCAL_CONFIG_FILE"
+    rm -f "${LOCAL_CONFIG_FILE}.bak"
+    echo -e "${GREEN}✓ Updated $LOCAL_CONFIG_FILE${NC}"
+elif [ -f "$LOCAL_EXAMPLE" ]; then
+    # Create from example
+    cp "$LOCAL_EXAMPLE" "$LOCAL_CONFIG_FILE"
+    sed -i.bak "s|^TUNNEL_TOKEN=.*|TUNNEL_TOKEN=$TUNNEL_TOKEN|" "$LOCAL_CONFIG_FILE"
+    sed -i.bak "s|^N8N_DOMAIN=.*|N8N_DOMAIN=$DOMAIN|" "$LOCAL_CONFIG_FILE"
+    rm -f "${LOCAL_CONFIG_FILE}.bak"
+    echo -e "${GREEN}✓ Created $LOCAL_CONFIG_FILE from example${NC}"
+else
+    echo -e "${YELLOW}Warning: Could not find local config at $LOCAL_CONFIG_FILE${NC}"
 fi
 echo ""
 

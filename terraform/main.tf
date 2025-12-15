@@ -180,6 +180,15 @@ ENVEOF
     echo "TUNNEL_TOKEN=<redacted>" # Don't log the actual token
     ls -la .env
 
+    # --- E.2 Write Cloudflared Config ---
+    echo "Writing cloudflared config.yml..."
+    cat > config.yml <<CONFIGEOF
+ingress:
+  - hostname: ${var.domain}
+    service: http://n8n:5678
+  - service: http_status:404
+CONFIGEOF
+
     # --- F. Fix Permissions ---
     echo "Setting permissions..."
     # Create local-files directory and give ownership to UID 1000 (node user)
