@@ -58,6 +58,24 @@ fi
 # Navigate to deployment directory
 cd "$DEPLOYMENT_DIR"
 
+# Check for config.yml directory issue (Docker mount artifact)
+if [ -d "config.yml" ]; then
+    echo -e "${YELLOW}Found config.yml as a directory. Removing it...${NC}"
+    rm -rf "config.yml"
+fi
+
+# Check if config.yml exists (required for tunnel)
+if [ ! -f "config.yml" ]; then
+    echo -e "${YELLOW}Warning: config.yml not found. It should have been created by setup-tunnel.sh${NC}"
+    echo -e "${YELLOW}Creating a default one...${NC}"
+    cat > config.yml <<EOF
+ingress:
+  - hostname: $N8N_DOMAIN
+    service: http://n8n:5678
+  - service: http_status:404
+EOF
+fi
+
 echo -e "${BLUE}Starting n8n with Cloudflare Tunnel...${NC}"
 docker-compose up -d
 

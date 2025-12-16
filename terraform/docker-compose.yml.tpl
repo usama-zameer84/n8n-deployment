@@ -43,6 +43,9 @@ services:
       - N8N_GIT_NODE_DISABLE_BARE_REPOS=true
       - N8N_COMMUNITY_NODES_ENABLED=false
       - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      
+      # User Management
+      - N8N_USER_MANAGEMENT_DISABLED=false
     volumes:
       - n8n_data:/home/node/.n8n
       - ./local-files:/files

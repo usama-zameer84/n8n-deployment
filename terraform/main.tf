@@ -182,6 +182,11 @@ ENVEOF
 
     # --- E.2 Write Cloudflared Config ---
     echo "Writing cloudflared config.yml..."
+    # Safety check: if config.yml exists as a directory (from a failed docker mount), remove it
+    if [ -d "config.yml" ]; then
+      echo "Removing existing config.yml directory..."
+      rm -rf config.yml
+    fi
     cat > config.yml <<CONFIGEOF
 ingress:
   - hostname: ${var.domain}

@@ -217,6 +217,13 @@ if [ ! -d "$DOCKER_CONFIG_DIR" ]; then
 fi
 
 DOCKER_CONFIG_FILE="$DOCKER_CONFIG_DIR/config.yml"
+
+# Check if config.yml is a directory (Docker mount issue) and remove it
+if [ -d "$DOCKER_CONFIG_FILE" ]; then
+    echo -e "${YELLOW}Removing directory $DOCKER_CONFIG_FILE (likely created by Docker mount)${NC}"
+    rm -rf "$DOCKER_CONFIG_FILE"
+fi
+
 cat > "$DOCKER_CONFIG_FILE" <<EOF
 tunnel: $TUNNEL_ID
 ingress:
