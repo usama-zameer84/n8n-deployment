@@ -68,7 +68,11 @@ cp deployments/local-with-tunnel/config.env.example deployments/local-with-tunne
 #    - TUNNEL_TOKEN
 #    - N8N_DOMAIN
 
-# 4. Deploy
+# 4. (Optional) Configure Tunnel Ingress
+#    If you need custom ingress rules, copy and edit config.yml:
+cp deployments/local-with-tunnel/config.yml.example deployments/local-with-tunnel/config.yml
+
+# 5. Deploy
 ./deploy.sh
 # Choose option 2
 ```

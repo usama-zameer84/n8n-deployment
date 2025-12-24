@@ -1,5 +1,5 @@
-tunnel: 41f7fd5b-1e3f-46d3-b4d0-558f6ed30061
+tunnel: 637df4e1-653c-4269-9c63-8b197d23d054
 ingress:
-  - hostname: n8n.reaperautomate.work
+  - hostname: n8n-local.reaperautomate.work
     service: http://n8n:5678
   - service: http_status:404

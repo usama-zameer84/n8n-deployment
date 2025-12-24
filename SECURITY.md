@@ -133,7 +133,6 @@ This project includes:
 We rely on:
 - Docker/Docker Compose
 - n8n (official images)
-- PostgreSQL (official images)
 - Cloudflare Tunnel
 - Terraform
 - Google Cloud Platform

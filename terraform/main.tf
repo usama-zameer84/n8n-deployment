@@ -220,14 +220,6 @@ CONFIGEOF
     echo ""
     echo "=== Checking individual containers ==="
     
-    # Check postgres
-    if docker ps | grep -q "n8n-postgres"; then
-      echo "✓ PostgreSQL container is running"
-    else
-      echo "✗ PostgreSQL container failed"
-      docker logs n8n-postgres 2>&1 | tail -20
-    fi
-    
     # Check n8n
     if docker ps | grep -q "n8n"; then
       echo "✓ n8n container is running"
@@ -255,7 +247,6 @@ CONFIGEOF
 # 7. Read Docker Compose template and substitute variables
 locals {
   docker_compose_content = templatefile("${path.module}/docker-compose.yml.tpl", {
-    postgres_password = var.postgres_password
     domain            = var.domain
     timezone          = var.timezone
   })

@@ -68,11 +68,10 @@ echo ""
 echo "Which logs do you want to check?"
 echo "1) n8n Application (Live logs)"
 echo "2) Cloudflare Tunnel (Live logs)"
-echo "3) PostgreSQL Database (Live logs)"
-echo "4) VM Startup/Deployment Log (Debugging deployment issues)"
-echo "5) Docker Container Status"
+echo "3) VM Startup/Deployment Log (Debugging deployment issues)"
+echo "4) Docker Container Status"
 echo ""
-read -p "Select an option (1-5): " OPTION
+read -p "Select an option (1-4): " OPTION
 
 case $OPTION in
     1)
@@ -84,14 +83,10 @@ case $OPTION in
         CMD="sudo docker logs -f cloudflare-tunnel"
         ;;
     3)
-        echo -e "${BLUE}Fetching database logs... (Ctrl+C to exit)${NC}"
-        CMD="sudo docker logs -f n8n-postgres"
-        ;;
-    4)
         echo -e "${BLUE}Fetching startup script logs... (Ctrl+C to exit)${NC}"
         CMD="tail -f /var/log/startup-script.log"
         ;;
-    5)
+    4)
         echo -e "${BLUE}Checking container status...${NC}"
         CMD="sudo docker ps -a"
         ;;

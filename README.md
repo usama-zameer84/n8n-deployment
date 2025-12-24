@@ -46,7 +46,7 @@
   </tr>
   <tr>
     <td>📦 <strong>Production-ready</strong></td>
-    <td>PostgreSQL, auto-restart, data persistence</td>
+    <td>Auto-restart, data persistence</td>
   </tr>
   <tr>
     <td>🎯 <strong>Flexible configs</strong></td>
@@ -162,6 +162,27 @@ cp deployments/local/config.env.example deployments/local/config.env
 3. Deploy:
 ```bash
 ./scripts/deploy-local.sh
+```
+
+### Local Deployment with Tunnel
+
+1. Copy the example configuration:
+```bash
+cp deployments/local-with-tunnel/config.env.example deployments/local-with-tunnel/config.env
+```
+
+2. Edit `config.env` with your Tunnel Token and Domain.
+
+3. (Optional) Configure Tunnel Ingress:
+   If you need custom ingress rules or a specific tunnel ID, copy and edit the config file:
+```bash
+cp deployments/local-with-tunnel/config.yml.example deployments/local-with-tunnel/config.yml
+```
+   *Note: This file is git-ignored for security. The deployment script can generate a basic one if missing.*
+
+4. Deploy:
+```bash
+./scripts/deploy-local-with-tunnel.sh
 ```
 
 ### Cloud Deployment with Tunnel

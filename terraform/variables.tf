@@ -26,13 +26,6 @@ variable "timezone" {
   default     = "UTC"
 }
 
-variable "postgres_password" {
-  description = "Password for the PostgreSQL database"
-  type        = string
-  sensitive   = true
-  default     = "n8n_secure_password"
-}
-
 variable "region" {
   description = "GCP region"
   type        = string

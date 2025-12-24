@@ -27,20 +27,69 @@ fi
 if [ ! -f "$DEPLOYMENT_DIR/config.env" ]; then
     echo -e "${YELLOW}Creating config.env from example...${NC}"
     cp "$DEPLOYMENT_DIR/config.env.example" "$DEPLOYMENT_DIR/config.env"
-    echo -e "${RED}============================================${NC}"
-    echo -e "${RED}   IMPORTANT: Configuration Required!${NC}"
-    echo -e "${RED}============================================${NC}"
-    echo -e "Please edit ${YELLOW}$DEPLOYMENT_DIR/config.env${NC}"
-    echo -e "and fill in your:"
-    echo -e "  1. ${YELLOW}TUNNEL_TOKEN${NC} (from Cloudflare)"
-    echo -e "  2. ${YELLOW}N8N_DOMAIN${NC} (your domain)"
-    echo ""
-    echo -e "Run this script again after configuration."
-    exit 1
 fi
 
 # Load environment variables
 export $(cat "$DEPLOYMENT_DIR/config.env" | grep -v '^#' | xargs)
+
+# Show current configuration
+if [ -n "$TUNNEL_TOKEN" ] && [ "$TUNNEL_TOKEN" != "your_tunnel_token_here" ] && \
+   [ -n "$N8N_DOMAIN" ] && [ "$N8N_DOMAIN" != "your-domain.com" ]; then
+    echo -e "${GREEN}Current Configuration:${NC}"
+    echo -e "  Domain: ${CYAN}$N8N_DOMAIN${NC}"
+    echo -e "  Token:  ${CYAN}${TUNNEL_TOKEN:0:10}...${NC}"
+    echo ""
+    read -p "Do you want to reconfigure? (y/N): " RECONFIGURE
+    if [[ "$RECONFIGURE" =~ ^[Yy] ]]; then
+        TUNNEL_TOKEN=""
+        N8N_DOMAIN=""
+    fi
+fi
+
+# Check if configuration is needed
+if [ -z "$TUNNEL_TOKEN" ] || [ "$TUNNEL_TOKEN" = "your_tunnel_token_here" ] || \
+   [ -z "$N8N_DOMAIN" ] || [ "$N8N_DOMAIN" = "your-domain.com" ]; then
+   
+    echo -e "${RED}============================================${NC}"
+    echo -e "${RED}   Configuration Required!${NC}"
+    echo -e "${RED}============================================${NC}"
+    
+    # Option 1: Automatic Setup
+    if command -v cloudflared &> /dev/null; then
+        echo -e "Cloudflare Tunnel CLI found."
+        read -p "Do you want to run the automatic tunnel setup wizard? (Y/n): " AUTO_SETUP
+        if [[ "$AUTO_SETUP" =~ ^[Yy] ]] || [[ -z "$AUTO_SETUP" ]]; then
+            "$SCRIPT_DIR/setup-tunnel.sh"
+            # Reload env after setup
+            export $(cat "$DEPLOYMENT_DIR/config.env" | grep -v '^#' | xargs)
+        fi
+    fi
+    
+    # Option 2: Manual Input (if still not configured)
+    if [ -z "$TUNNEL_TOKEN" ] || [ "$TUNNEL_TOKEN" = "your_tunnel_token_here" ]; then
+        echo ""
+        echo -e "${YELLOW}Manual Configuration:${NC}"
+        echo "Please enter your Cloudflare Tunnel Token."
+        echo "(Get this from https://one.dash.cloudflare.com/ > Networks > Tunnels)"
+        read -p "Tunnel Token: " INPUT_TOKEN
+        if [ -n "$INPUT_TOKEN" ]; then
+            # Escape special characters in token if needed, though usually base64 safe
+            sed -i.bak "s|^TUNNEL_TOKEN=.*|TUNNEL_TOKEN=$INPUT_TOKEN|" "$DEPLOYMENT_DIR/config.env"
+            TUNNEL_TOKEN="$INPUT_TOKEN"
+            rm -f "$DEPLOYMENT_DIR/config.env.bak"
+        fi
+    fi
+
+    if [ -z "$N8N_DOMAIN" ] || [ "$N8N_DOMAIN" = "your-domain.com" ]; then
+        echo ""
+        read -p "Enter your n8n domain (e.g., n8n.example.com): " INPUT_DOMAIN
+        if [ -n "$INPUT_DOMAIN" ]; then
+            sed -i.bak "s|^N8N_DOMAIN=.*|N8N_DOMAIN=$INPUT_DOMAIN|" "$DEPLOYMENT_DIR/config.env"
+            N8N_DOMAIN="$INPUT_DOMAIN"
+            rm -f "$DEPLOYMENT_DIR/config.env.bak"
+        fi
+    fi
+fi
 
 # Validate required variables
 if [ -z "$TUNNEL_TOKEN" ] || [ "$TUNNEL_TOKEN" = "your_tunnel_token_here" ]; then

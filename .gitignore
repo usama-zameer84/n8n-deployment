@@ -1,6 +1,8 @@
 # Sensitive files - DO NOT COMMIT
 *.env
 config.env
+deployments/local-with-tunnel/config.yml
+config.yml
 .env.local
 .env.production
 

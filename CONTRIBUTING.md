@@ -290,7 +290,7 @@ Edit the relevant `docker-compose.yml` file:
 n8n:
   environment:
     # Existing variables
-    - DB_TYPE=postgresdb
+    - N8N_HOST=${N8N_DOMAIN}
     # Add your new variable
     - YOUR_NEW_VAR=value
 ```

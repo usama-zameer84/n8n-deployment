@@ -15,9 +15,6 @@ domain = "n8n.example.com"
 # Timezone for n8n
 timezone = "UTC"
 
-# PostgreSQL password (change this!)
-postgres_password = "change-this-secure-password"
-
 # Optional: Change GCP region/zone
 # region = "us-central1"
 # zone = "us-central1-a"

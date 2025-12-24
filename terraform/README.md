@@ -10,7 +10,6 @@ This Terraform configuration creates:
 - e2-micro VM instance (free tier eligible)
 - Firewall rules for SSH access
 - Docker Compose deployment on the VM
-- PostgreSQL database
 - Optional Cloudflare Tunnel integration
 
 ## Files
@@ -42,7 +41,6 @@ billing_account_id = "YOUR-BILLING-ACCOUNT-ID"  # Required
 project_name       = "n8n-automation"            # Optional
 tunnel_token       = "your-tunnel-token"         # Required for tunnel
 domain            = "n8n.example.com"            # Required for tunnel
-postgres_password  = "secure-password"           # Recommended
 timezone          = "UTC"                        # Optional
 region            = "us-central1"                # Optional
 zone              = "us-central1-a"              # Optional
@@ -144,7 +142,6 @@ Basic deployment with public IP access.
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `project_name` | GCP project name prefix | `n8n-automation` |
-| `postgres_password` | Database password | `n8n_secure_password` |
 | `timezone` | Timezone for n8n | `UTC` |
 | `region` | GCP region | `us-central1` |
 | `zone` | GCP zone | `us-central1-a` |
@@ -199,7 +196,6 @@ Edit `docker-compose.yml.tpl`:
 ```yaml
 n8n:
   environment:
-    - DB_TYPE=postgresdb
     # ... existing vars ...
     - YOUR_NEW_VAR=value
 ```
@@ -254,7 +250,6 @@ gcloud compute ssh n8n-server --zone=us-central1-a --project=$(terraform output 
 
 # Backup volumes
 docker run --rm -v n8n_data:/data -v $(pwd):/backup ubuntu tar czf /backup/n8n-backup.tar.gz /data
-docker run --rm -v postgres_data:/data -v $(pwd):/backup ubuntu tar czf /backup/postgres-backup.tar.gz /data
 
 # Download backups
 exit
@@ -328,9 +323,8 @@ docker logs cloudflare-tunnel
 
 ## Security Considerations
 
-1. **Change default passwords** - Update `postgres_password` in `terraform.tfvars`
-2. **Restrict SSH access** - Modify firewall rules in `main.tf`
-3. **Keep secrets secure** - Never commit `terraform.tfvars`
+1. **Restrict SSH access** - Modify firewall rules in `main.tf`
+2. **Keep secrets secure** - Never commit `terraform.tfvars`
 4. **Use tunnel** - Recommended over direct IP access
 5. **Enable 2FA** - On GCP and Cloudflare accounts
 6. **Monitor costs** - Check GCP billing regularly
